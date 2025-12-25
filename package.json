@@ -1,15 +1,38 @@
-{
-  "name": "assa-kurye-server",
-  "version": "1.0.0",
-  "description": "Kurye Takip Sistemi Sunucusu",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "body-parser": "^1.20.2",
-    "jsonwebtoken": "^9.0.0"
-  }
-}
+// server.js içindeki login kısmını bununla güncelle veya server.js'i buna göre düzenle
+app.post('/api/auth/login', (req, res) => {
+    const { kurye_id, sifre } = req.body;
+    const db = JSON.parse(fs.readFileSync('database.json'));
+    const kurye = db.kuryeler.find(k => k.kurye_id === kurye_id && k.sifre === sifre);
+
+    if (kurye) {
+        const token = jwt.sign({ kurye_id }, 'gizli_anahtar');
+        // BURASI KRİTİK: Merkez koordinatlarını geri gönderiyoruz
+        res.json({ 
+            token, 
+            kuryeId: kurye_id,
+            merkez_konum: {
+                lat: kurye.vardiya_merkez_lat,
+                lon: kurye.vardiya_merkez_lon
+            }
+        });
+    } else {
+        res.status(401).json({ message: 'Hatalı ID veya Şifre' });
+    }
+});
+
+// Vardiya Durumunu Güncelleme API'si (Yeni ekle)
+app.post('/api/courier/vardiya-durum', (req, res) => {
+    const { kurye_id, aktif } = req.body;
+    let db = JSON.parse(fs.readFileSync('database.json'));
+    const index = db.kuryeler.findIndex(k => k.kurye_id === kurye_id);
+    
+    if (index !== -1) {
+        db.kuryeler[index].aktif = aktif;
+        db.kuryeler[index].giris_saati = aktif ? new Date() : db.kuryeler[index].giris_saati;
+        db.kuryeler[index].cikis_saati = aktif ? null : new Date();
+        fs.writeFileSync('database.json', JSON.stringify(db, null, 2));
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ message: 'Kurye bulunamadı' });
+    }
+});
