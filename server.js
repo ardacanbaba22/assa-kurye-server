@@ -19,7 +19,23 @@ const readDB = () => {
 };
 const writeDB = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 
-// Kurye Giriş
+// Admin: Kuryeye Yeni Hedef/Konum Yollama API
+app.post('/api/admin/duyuru-ekle', (req, res) => {
+    const { baslik, icerik, hedef_lat, hedef_lon } = req.body;
+    let db = readDB();
+    // En son duyuruyu kuryenin ekranına düşecek şekilde kaydeder
+    db.duyurular = [{ 
+        baslik, 
+        icerik, 
+        hedef_lat: parseFloat(hedef_lat), 
+        hedef_lon: parseFloat(hedef_lon),
+        tarih: new Date().toLocaleString('tr-TR') 
+    }];
+    writeDB(db);
+    res.json({ message: "Konum ve İş Kuryeye İletildi" });
+});
+
+// Kurye Giriş, Vardiya Durum ve Konum Gönderme API'leri (Değişmedi)
 app.post('/api/auth/login', (req, res) => {
     const { kurye_id, sifre } = req.body;
     const db = readDB();
@@ -30,7 +46,6 @@ app.post('/api/auth/login', (req, res) => {
     } else { res.status(401).json({ message: 'Hatalı ID veya Şifre' }); }
 });
 
-// Canlı Konum ve Vardiya Durumu Kaydı
 app.post('/api/courier/vardiya-durum', (req, res) => {
     const { kurye_id, aktif } = req.body;
     let db = readDB();
@@ -48,20 +63,10 @@ app.post('/api/courier/konum-gonder', (req, res) => {
     let db = readDB();
     const idx = (db.kuryeler || []).findIndex(k => k.kurye_id === kurye_id);
     if (idx !== -1) {
-        db.kuryeler[idx].lat = lat;
-        db.kuryeler[idx].lon = lon;
+        db.kuryeler[idx].lat = lat; db.kuryeler[idx].lon = lon;
         writeDB(db);
     }
     res.json({ success: true });
-});
-
-// Duyuru Sistemi API'leri
-app.post('/api/admin/duyuru-ekle', (req, res) => {
-    const { baslik, icerik } = req.body;
-    let db = readDB();
-    db.duyurular = [{ baslik, icerik, tarih: new Date().toLocaleString('tr-TR') }];
-    writeDB(db);
-    res.json({ message: "Yayınlandı" });
 });
 
 app.get('/api/courier/duyuru-cek', (req, res) => {
