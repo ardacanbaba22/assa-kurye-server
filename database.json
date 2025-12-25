@@ -1,14 +1,4 @@
-{
-  "kuryeler": [
-    {
-      "kurye_id": "C001",
-      "sifre": "123456",
-      "vardiya_merkez_lat": 41.0082,
-      "vardiya_merkez_lon": 28.9784,
-      "aktif": false,
-      "giris_saati": null,
-      "cikis_saati": null
-    }
-  ],
+{{
+  "kuryeler": [],
   "duyurular": []
 }
