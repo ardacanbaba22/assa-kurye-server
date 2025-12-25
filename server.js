@@ -19,35 +19,7 @@ const readDB = () => {
 };
 const writeDB = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 
-// Admin: Sadece Seçilen Kuryeye Konum Yolla
-app.post('/api/admin/duyuru-ekle', (req, res) => {
-    const { kurye_id, baslik, icerik, hedef_lat, hedef_lon } = req.body;
-    let db = readDB();
-    
-    // Duyuruları kurye ID'sine göre ayırıyoruz
-    if(!db.duyurular) db.duyurular = {};
-    
-    db.duyurular[kurye_id] = { 
-        baslik, 
-        icerik, 
-        hedef_lat: parseFloat(hedef_lat), 
-        hedef_lon: parseFloat(hedef_lon),
-        tarih: new Date().toLocaleString('tr-TR') 
-    };
-    
-    writeDB(db);
-    res.json({ message: `${kurye_id} için konum güncellendi.` });
-});
-
-// Kurye: Sadece Kendine Gelen Konumu Çek
-app.get('/api/courier/duyuru-cek/:kurye_id', (req, res) => {
-    const db = readDB();
-    const kurye_id = req.params.kurye_id;
-    const kuryeDuyurusu = db.duyurular ? db.duyurular[kurye_id] : null;
-    res.json({ duyuru: kuryeDuyurusu });
-});
-
-// --- Diğer Login ve Konum API'leri (Aynen Kalıyor) ---
+// Kurye Giriş
 app.post('/api/auth/login', (req, res) => {
     const { kurye_id, sifre } = req.body;
     const db = readDB();
@@ -58,6 +30,7 @@ app.post('/api/auth/login', (req, res) => {
     } else { res.status(401).json({ message: 'Hatalı ID veya Şifre' }); }
 });
 
+// Vardiya Durumu
 app.post('/api/courier/vardiya-durum', (req, res) => {
     const { kurye_id, aktif } = req.body;
     let db = readDB();
@@ -65,29 +38,52 @@ app.post('/api/courier/vardiya-durum', (req, res) => {
     if (idx !== -1) {
         db.kuryeler[idx].aktif = aktif;
         db.kuryeler[idx].giris_saati = aktif ? new Date().toLocaleString('tr-TR') : db.kuryeler[idx].giris_saati;
+        if(!aktif) db.kuryeler[idx].son_hedef = "Boşta";
         writeDB(db);
         res.json({ success: true });
     } else { res.status(404).send(); }
 });
 
+// Anlık Konum Kaydı
 app.post('/api/courier/konum-gonder', (req, res) => {
     const { kurye_id, lat, lon } = req.body;
     let db = readDB();
     const idx = (db.kuryeler || []).findIndex(k => k.kurye_id === kurye_id);
     if (idx !== -1) {
-        db.kuryeler[idx].lat = lat; db.kuryeler[idx].lon = lon;
+        db.kuryeler[idx].lat = lat;
+        db.kuryeler[idx].lon = lon;
         writeDB(db);
     }
     res.json({ success: true });
 });
 
+// Admin: Kuryeye Hedef Konum Yolla
+app.post('/api/admin/duyuru-ekle', (req, res) => {
+    const { kurye_id, baslik, icerik, hedef_lat, hedef_lon } = req.body;
+    let db = readDB();
+    if(!db.duyurular) db.duyurular = {};
+    db.duyurular[kurye_id] = { baslik, icerik, hedef_lat, hedef_lon };
+    
+    const idx = (db.kuryeler || []).findIndex(k => k.kurye_id === kurye_id);
+    if (idx !== -1) db.kuryeler[idx].son_hedef = baslik;
+
+    writeDB(db);
+    res.json({ message: "Hedef Gönderildi" });
+});
+
+app.get('/api/courier/duyuru-cek/:kurye_id', (req, res) => {
+    const db = readDB();
+    res.json({ duyuru: db.duyurular ? db.duyurular[req.params.kurye_id] : null });
+});
+
 app.get('/api/admin/tum-kuryeler-ve-vardiya', (req, res) => res.json(readDB().kuryeler || []));
+
 app.post('/api/admin/kurye-ekle', (req, res) => {
     let db = readDB();
-    db.kuryeler.push({ ...req.body, aktif: false, lat: null, lon: null });
+    db.kuryeler.push({ ...req.body, aktif: false, lat: 0, lon: 0, son_hedef: "Görev Yok" });
     writeDB(db);
-    res.json({ message: "Başarılı" });
+    res.json({ message: "Kurye Eklendi" });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server aktif.`));
+app.listen(PORT, () => console.log(`Server aktif`));
