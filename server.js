@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 
 const DB_FILE = 'database.json';
 
-// Kurye Giriş ve Koordinat Gönderme
+// Kurye Giriş API
 app.post('/api/auth/login', (req, res) => {
     const { kurye_id, sifre } = req.body;
     const db = JSON.parse(fs.readFileSync(DB_FILE));
@@ -21,45 +21,33 @@ app.post('/api/auth/login', (req, res) => {
         res.json({ 
             token, 
             kuryeId: kurye_id,
-            merkez_konum: {
-                lat: kurye.vardiya_merkez_lat,
-                lon: kurye.vardiya_merkez_lon
-            }
+            merkez_konum: { lat: kurye.vardiya_merkez_lat, lon: kurye.vardiya_merkez_lon }
         });
-    } else {
-        res.status(401).json({ message: 'Hatalı ID veya Şifre' });
-    }
+    } else { res.status(401).json({ message: 'Hatalı ID veya Şifre' }); }
 });
 
-// Vardiya Durumunu Admin Paneline Bildirme
+// Vardiya Durumunu Admin'e Bildir
 app.post('/api/courier/vardiya-durum', (req, res) => {
     const { kurye_id, aktif } = req.body;
     let db = JSON.parse(fs.readFileSync(DB_FILE));
     const index = db.kuryeler.findIndex(k => k.kurye_id === kurye_id);
-    
     if (index !== -1) {
         db.kuryeler[index].aktif = aktif;
         db.kuryeler[index].giris_saati = aktif ? new Date().toLocaleString('tr-TR') : db.kuryeler[index].giris_saati;
         db.kuryeler[index].cikis_saati = aktif ? null : new Date().toLocaleString('tr-TR');
         fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
         res.json({ success: true });
-    } else {
-        res.status(404).json({ message: 'Kurye bulunamadı' });
-    }
+    } else { res.status(404).send(); }
 });
 
-// Konum Kaydetme
-app.post('/api/courier/konum-gonder', (req, res) => {
-    const { lat, lon } = req.body;
-    // Burada konumları database.json'a veya loglara kaydedebilirsin
-    res.json({ success: true });
-});
-
-// Admin İçin Tüm Kuryeleri Listeleme
+// Admin API
 app.get('/api/admin/tum-kuryeler-ve-vardiya', (req, res) => {
     const db = JSON.parse(fs.readFileSync(DB_FILE));
     res.json(db.kuryeler);
 });
 
+// Konum API
+app.post('/api/courier/konum-gonder', (req, res) => { res.json({ success: true }); });
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Sunucu ${PORT} portunda aktif.`));
+app.listen(PORT, () => console.log("Sunucu Aktif"));
