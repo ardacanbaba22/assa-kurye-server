@@ -12,30 +12,42 @@ const DB_FILE = 'database.json';
 
 const readDB = () => {
     try {
-        if (!fs.existsSync(DB_FILE)) return { kuryeler: [], duyurular: [] };
+        if (!fs.existsSync(DB_FILE)) return { kuryeler: [], duyurular: {} };
         const data = fs.readFileSync(DB_FILE, 'utf8');
         return JSON.parse(data);
-    } catch (err) { return { kuryeler: [], duyurular: [] }; }
+    } catch (err) { return { kuryeler: [], duyurular: {} }; }
 };
 const writeDB = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 
-// Admin: Kuryeye Yeni Hedef/Konum Yollama API
+// Admin: Sadece Seçilen Kuryeye Konum Yolla
 app.post('/api/admin/duyuru-ekle', (req, res) => {
-    const { baslik, icerik, hedef_lat, hedef_lon } = req.body;
+    const { kurye_id, baslik, icerik, hedef_lat, hedef_lon } = req.body;
     let db = readDB();
-    // En son duyuruyu kuryenin ekranına düşecek şekilde kaydeder
-    db.duyurular = [{ 
+    
+    // Duyuruları kurye ID'sine göre ayırıyoruz
+    if(!db.duyurular) db.duyurular = {};
+    
+    db.duyurular[kurye_id] = { 
         baslik, 
         icerik, 
         hedef_lat: parseFloat(hedef_lat), 
         hedef_lon: parseFloat(hedef_lon),
         tarih: new Date().toLocaleString('tr-TR') 
-    }];
+    };
+    
     writeDB(db);
-    res.json({ message: "Konum ve İş Kuryeye İletildi" });
+    res.json({ message: `${kurye_id} için konum güncellendi.` });
 });
 
-// Kurye Giriş, Vardiya Durum ve Konum Gönderme API'leri (Değişmedi)
+// Kurye: Sadece Kendine Gelen Konumu Çek
+app.get('/api/courier/duyuru-cek/:kurye_id', (req, res) => {
+    const db = readDB();
+    const kurye_id = req.params.kurye_id;
+    const kuryeDuyurusu = db.duyurular ? db.duyurular[kurye_id] : null;
+    res.json({ duyuru: kuryeDuyurusu });
+});
+
+// --- Diğer Login ve Konum API'leri (Aynen Kalıyor) ---
 app.post('/api/auth/login', (req, res) => {
     const { kurye_id, sifre } = req.body;
     const db = readDB();
@@ -69,11 +81,6 @@ app.post('/api/courier/konum-gonder', (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/api/courier/duyuru-cek', (req, res) => {
-    const db = readDB();
-    res.json({ duyuru: db.duyurular ? db.duyurular[0] : null });
-});
-
 app.get('/api/admin/tum-kuryeler-ve-vardiya', (req, res) => res.json(readDB().kuryeler || []));
 app.post('/api/admin/kurye-ekle', (req, res) => {
     let db = readDB();
@@ -83,4 +90,4 @@ app.post('/api/admin/kurye-ekle', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server aktif: ${PORT}`));
+app.listen(PORT, () => console.log(`Server aktif.`));
