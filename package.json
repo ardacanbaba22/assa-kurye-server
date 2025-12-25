@@ -1,19 +1,53 @@
-app.post('/api/auth/login', (req, res) => {
-    const { kurye_id, sifre } = req.body;
-    const db = JSON.parse(fs.readFileSync('database.json'));
-    const kurye = db.kuryeler.find(k => k.kurye_id === kurye_id && k.sifre === sifre);
-
-    if (kurye) {
-        const token = jwt.sign({ kurye_id }, 'gizli_anahtar');
-        res.json({ 
-            token, 
-            kuryeId: kurye_id,
-            merkez_konum: {
-                lat: kurye.vardiya_merkez_lat,
-                lon: kurye.vardiya_merkez_lon
-            }
-        });
-    } else {
-        res.status(401).json({ message: 'Hatalı ID veya Şifre' });
+// index.html içindeki start-btn.onclick kısmını bununla değiştir
+document.getElementById('start-btn').onclick = () => {
+    if (!merkezCoords || !merkezCoords.lat) {
+        alert("Merkez koordinatları alınamadı. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+        return;
     }
-});
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const kuryeLat = pos.coords.latitude;
+        const kuryeLon = pos.coords.longitude;
+
+        const mesafe = getDistance(kuryeLat, kuryeLon, merkezCoords.lat, merkezCoords.lon);
+        
+        // KESİN KONTROL: 500 metreden uzaksa asla başlatmaz
+        if (mesafe > 500) {
+            alert(`❌ Merkeze uzaksınız! Mesafe: ${Math.round(mesafe)} metre. Giriş için merkeze 500m yaklaşmalısınız.`);
+            return; 
+        }
+
+        // --- SUNUCUYA VARDİYA BAŞLADI BİLGİSİ GÖNDER ---
+        const kurye_id = document.getElementById('c_kurye_id').value;
+        await fetch(`${API_BASE_URL}/courier/vardiya-durum`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kurye_id: kurye_id, aktif: true })
+        });
+
+        document.getElementById('tracking-status').textContent = "AKTİF ✅";
+        document.getElementById('tracking-status').style.color = "green";
+
+        // Takip döngüsünü başlat
+        trackingInterval = setInterval(() => {
+            navigator.geolocation.getCurrentPosition(async (p) => {
+                const coords = { lat: p.coords.latitude, lon: p.coords.longitude };
+                document.getElementById('current-location').textContent = coords.lat.toFixed(5) + ", " + coords.lon.toFixed(5);
+                
+                await fetch(`${API_BASE_URL}/courier/konum-gonder`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + currentToken
+                    },
+                    body: JSON.stringify(coords)
+                });
+            }, null, { enableHighAccuracy: true });
+        }, 15000);
+        
+        alert("Vardiya Başlatıldı! Admin panelinde artık aktif görüneceksiniz.");
+
+    }, (err) => {
+        alert("Hata: Konum alınamadı. Lütfen GPS izinlerini kontrol edin.");
+    }, { enableHighAccuracy: true });
+};
