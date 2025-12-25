@@ -1,59 +1,14 @@
 {
-  "kuryeler": {
-    "sfsf": {
-      "kurye_id": "sfsf",
-      "sifre": "sfsfs",
-      "merkez": {
-        "lat": 56464,
-        "lon": 5646546
-      },
-      "aktif": false,
-      "giris_saati": null,
-      "cikis_saati": null,
-      "son_konum": null
-    },
-    "arda": {
-      "kurye_id": "arda",
-      "sifre": "1234",
-      "merkez": {
-        "lat": 56464,
-        "lon": 5646546
-      },
-      "aktif": false,
-      "giris_saati": null,
-      "cikis_saati": null,
-      "son_konum": {
-        "lat": 36.9819648,
-        "lon": 35.3992704
-      },
-      "son_guncelleme": "25.12.2025 14:32:31"
-    },
-    "Arda": {
-      "kurye_id": "Arda",
+  "kuryeler": [
+    {
+      "kurye_id": "C001",
       "sifre": "123456",
-      "merkez": {
-        "lat": 7994646,
-        "lon": 64646464
-      },
+      "vardiya_merkez_lat": 41.0082,
+      "vardiya_merkez_lon": 28.9784,
       "aktif": false,
       "giris_saati": null,
-      "cikis_saati": null,
-      "son_konum": {
-        "lat": 36.8092682,
-        "lon": 34.6054279
-      },
-      "son_guncelleme": "25.12.2025 14:48:12"
+      "cikis_saati": null
     }
-  },
-  "duyuru": {
-    "baslik": "Lo",
-    "icerik": "Arda",
-    "kurye_listesi": [
-      "Arda"
-    ],
-    "tarih": {
-      "_seconds": 1766662860,
-      "_nanoseconds": 0
-    }
-  }
+  ],
+  "duyurular": []
 }
